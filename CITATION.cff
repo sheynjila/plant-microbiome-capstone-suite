@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: Please cite the primary study used by each project and this teaching repository.
+title: Plant Microbiome Capstone Suite
+type: software
+authors:
+  - name: Plant Microbiome Capstone Teaching Team
+version: 1.0.0
+date-released: 2026-09-05

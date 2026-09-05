@@ -1,0 +1,15 @@
+**/config/project.env
+**/work/
+**/raw_reads/
+**/references/*.qza
+**/references/*.fasta*
+**/references/*.bt2*
+**/references/*.k2d
+**/pipeline_raw_reads_to_counts_output/
+**/results/*
+!**/results/.gitkeep
+**/.Rhistory
+**/.Rproj.user/
+**/renv/library/
+**/__pycache__/
+**/*.pyc

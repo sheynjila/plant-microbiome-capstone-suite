@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=barley06_qc
+#SBATCH --partition=batch
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 #SBATCH --time=02:00:00

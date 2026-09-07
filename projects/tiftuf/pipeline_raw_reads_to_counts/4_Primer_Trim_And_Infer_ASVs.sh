@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=tiftuf04_features
+#SBATCH --partition=batch
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=16:00:00

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=tomato05_taxonomy
+#SBATCH --partition=batch
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
 #SBATCH --time=12:00:00

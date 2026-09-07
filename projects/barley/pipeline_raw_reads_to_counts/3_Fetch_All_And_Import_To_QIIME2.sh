@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=barley03_import
+#SBATCH --partition=batch
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=12G
 #SBATCH --time=08:00:00

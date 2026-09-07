@@ -13,7 +13,7 @@
 # databases are inputs whose versions and checksums belong in provenance.
 ###############################################################################
 set -euo pipefail
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_DIR="${PIPELINE_SCRIPT_DIR:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}}"
 source "${SCRIPT_DIR}/lib/common.sh"
 require_cmd qiime
 require_cmd biom

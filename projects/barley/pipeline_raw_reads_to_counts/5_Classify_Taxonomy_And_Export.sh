@@ -17,6 +17,11 @@ SCRIPT_DIR="${PIPELINE_SCRIPT_DIR:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_S
 source "${SCRIPT_DIR}/lib/common.sh"
 require_cmd qiime
 require_cmd biom
+# Real, confirmed gotcha on teach-sub1 (see Script 3's own comment for the
+# full diagnosis): a PYTHONPATH left over from another module loaded
+# alongside QIIME2 (FastQC/MultiQC/R, via load_modules.sh) leaks a
+# python-version-mismatched numpy build into qiime's own bundled python.
+unset PYTHONPATH
 mkdir -p "${OUTPUT_DIR}/exported"
 
 while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do

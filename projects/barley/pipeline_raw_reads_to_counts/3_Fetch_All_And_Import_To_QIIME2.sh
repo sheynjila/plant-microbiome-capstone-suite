@@ -16,6 +16,17 @@ set -euo pipefail
 SCRIPT_DIR="${PIPELINE_SCRIPT_DIR:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}}"
 source "${SCRIPT_DIR}/lib/common.sh"
 require_cmd qiime
+# Real, confirmed gotcha on teach-sub1 (barley03_import, 2026-09-09):
+# QIIME2 vendors its own complete python3.10 environment, but a
+# PYTHONPATH set by another module loaded alongside it in the same shell
+# (FastQC/MultiQC/R, via load_modules.sh) is not python-version-scoped --
+# it leaked a python3.11 SciPy-bundle numpy build into qiime's own
+# python3.10 interpreter, producing "ImportError: No module named
+# 'numpy.core._multiarray_umath'" the first time `qiime` imported
+# pandas. QIIME2's own troubleshooting docs recommend running with no
+# external PYTHONPATH set; this pipeline never needs PYTHONPATH for
+# anything else, so clearing it here is safe.
+unset PYTHONPATH
 manifest="${PROJECT_ROOT}/data/run_manifest.tsv"
 validate_reviewed_manifest "${manifest}"
 mkdir -p "${OUTPUT_DIR}/qiime_artifacts"

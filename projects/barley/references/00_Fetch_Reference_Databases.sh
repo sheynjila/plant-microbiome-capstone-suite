@@ -44,6 +44,12 @@ SCRIPT_DIR="${PIPELINE_SCRIPT_DIR:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_S
 source "${SCRIPT_DIR}/../pipeline_raw_reads_to_counts/lib/common.sh"
 require_cmd qiime
 require_cmd sha256sum
+# Real, confirmed gotcha on teach-sub1 (see Script 3 in
+# pipeline_raw_reads_to_counts for the full diagnosis): a PYTHONPATH left
+# over from another module loaded alongside QIIME2 (FastQC/MultiQC/R, via
+# load_modules.sh) leaks a python-version-mismatched numpy build into
+# qiime's own bundled python.
+unset PYTHONPATH
 
 if ! qiime rescript --help >/dev/null 2>&1; then
   die "q2-rescript plugin not found in the loaded QIIME2 module -- see this script's own header for what to do next."

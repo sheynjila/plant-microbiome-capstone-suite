@@ -12,12 +12,15 @@ installed or required.
 
 ```bash
 cd pipeline_orchestration
+source activate_conda_env.sh
 bash check_environment.sh && bash run_pipeline_from_yaml.sh pipeline_config.yaml
 ```
 
 That's it — this returns immediately after submitting all 7 jobs. Slurm's
 scheduler runs each one in turn, only starting step *N+1* once step *N*
 has actually exited successfully.
+
+**`activate_conda_env.sh` must be *sourced* (`source ...`, not `bash ...`)** — `conda activate` doesn't persist across a new login shell, and only changes the environment of whatever process runs it. Since no conda environment *name* is documented anywhere in this project (checked deliberately — see the script's own header), it discovers by capability instead of by name: it checks every environment on your account for whichever one actually provides `qiime`, `biom`, `fastqc`, `multiqc`, and `Rscript`, and activates it only if exactly one qualifies. Once you know which environment that is, skip the discovery cost on future sessions with `export PLANT_MICROBIOME_CONDA_ENV=<name>` before sourcing it.
 
 ## No script duplication, no directory-isolation trick
 
@@ -104,7 +107,10 @@ bash check_environment.sh
 ```
 
 Exits 0 only if every check passes, so it's safe to chain directly in
-front of the real run, as shown in Quick start.
+front of the real run, as shown in Quick start. It can tell you a
+required tool is missing from `PATH` but can't activate the environment
+that provides it — that's what `source activate_conda_env.sh` (above) is
+for; run it first.
 
 ## Monitoring progress
 

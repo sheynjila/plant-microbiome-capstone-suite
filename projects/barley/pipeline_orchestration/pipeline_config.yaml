@@ -1,0 +1,10 @@
+pipeline_name: Barley_Plant_Microbiome
+scripts_dir: ../pipeline_raw_reads_to_counts
+steps:
+  - {id: 1, script: 1_Fetch_And_Verify_Raw_Reads.sh, mode: sbatch}
+  - {id: 2, script: 2_Interpret_FastQC_Diagnostics.sh, mode: sbatch}
+  - {id: 3, script: 3_Fetch_All_And_Import_To_QIIME2.sh, mode: sbatch}
+  - {id: 4, script: 4_Primer_Trim_And_Infer_ASVs.sh, mode: sbatch}
+  - {id: 5, script: 5_Classify_Taxonomy_And_Export.sh, mode: sbatch}
+  - {id: 6, script: 6_QC_Report_Generator.sh, mode: sbatch}
+  - {id: 7, script: run_analysis.R, mode: sbatch_wrap, dir: ../analysis_metagenomics_phyloseq, wrap_cmd: Rscript, wrap_cpus: 4, wrap_mem: 16G, wrap_time: 04:00:00, wrap_partition: batch}

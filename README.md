@@ -43,6 +43,8 @@ Every project preserves the reference curriculum's order.
 5. Complete `data/analysis_metadata.tsv` without inferring groups from filenames or row order.
 6. Run `Rscript analysis_metagenomics_phyloseq/run_analysis.R`.
 
+Do this manually, step by step, the first time through. Once `data/run_manifest.tsv` is reviewed, each project's own `pipeline_orchestration/` folder can run Scripts 2-6 and the R analysis as one unattended Slurm job chain — see that folder's README.
+
 ## Documentation bundle
 
 The complete portfolio is available in [Markdown](docs/master/plant_microbiome_capstone_master_document.md), Word, and PDF under `docs/master/`. Each project also contains a concise README and an illustrated execution guide in Markdown, Word, and PDF.

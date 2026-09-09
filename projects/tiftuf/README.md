@@ -30,6 +30,8 @@ Rscript analysis_metagenomics_phyloseq/run_analysis.R
 
 On Slurm, submit each upstream script only after the preceding quality gate passes. The scripts also run directly in an activated Linux environment. Site-specific `module load` commands are intentionally excluded because module names differ among clusters.
 
+Once `data/run_manifest.tsv` has been reviewed, [`pipeline_orchestration/`](pipeline_orchestration/) can run Scripts 1-6 and the R analysis as one unattended Slurm job chain instead of submitting each step by hand.
+
 ## Metadata gate
 
 Complete one row per analysis unit in `data/analysis_metadata.tsv`. Required fields are `sample_id`, `analysis_id`, `run_accession`, `assay`, `experimental_unit_id`, `irrigation_pct_et`, `compartment`, `field_block`, `biological_replicate`, `control_status`. Use `experimental_unit_id` to distinguish the plant, RIL, or field plot from a run or PCR library. Technical runs must not be counted as independent biological replicates.

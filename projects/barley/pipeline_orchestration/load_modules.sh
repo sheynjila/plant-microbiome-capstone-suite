@@ -64,6 +64,19 @@
 #              && command -v biom` returned a real path
 #              (/apps/eb/QIIME2/2025.10-amplicon/bin/biom) -- biom ships
 #              bundled inside the QIIME2 module here.
+#   SRA-Toolkit -> NO pinned version yet. `module load SRA-Toolkit` (bare,
+#              no version) was confirmed to work on teach-sub1 --
+#              prefetch/fasterq-dump both ran real commands successfully
+#              -- but the exact resolved version string was never
+#              captured (`module list | grep -i sra` was asked for but
+#              not returned). Goes straight to discovery until that's
+#              confirmed. Only needed by lib/common.sh's
+#              sra_fallback_fetch(), triggered when ENA's own download
+#              is unavailable (see feedback_ena_intermittent_html_response
+#              in project memory) -- not required for a normal run where
+#              ENA succeeds, so this entry deliberately does NOT fail the
+#              whole load_modules.sh run if it can't be resolved; see the
+#              POLICY note below this array for how that's implemented.
 #
 # POLICY for 2+ real candidates found during discovery (no single
 # confirmed-working version to fall back to): auto-select the highest
@@ -101,21 +114,30 @@ if ! command -v module >/dev/null 2>&1; then
     return 1
 fi
 
-# family:pinned_version -- pinned may be EMPTY, meaning "no confirmed
-# version to try first, go straight to discovery" (see header above for
-# exactly which entries that applies to and why).
+# family:pinned_version:optional_flag -- pinned may be EMPTY, meaning "no
+# confirmed version to try first, go straight to discovery" (see header
+# above for exactly which entries that applies to and why). optional_flag
+# is either empty (this tool is unconditionally required -- a normal run
+# cannot succeed without it, and failing to load it fails this whole
+# script) or "optional" (this tool is only needed for a conditional code
+# path -- currently just SRA-Toolkit, needed only if ENA's own download
+# fails -- so failing to load it prints a clear NOTE but does NOT fail
+# this script; a normal run where ENA succeeds never touches it).
 _LM_TOOLS=(
-    "QIIME2:QIIME2/2025.10-amplicon"
-    "FastQC:FastQC/0.12.1-Java-11"
-    "MultiQC:MultiQC/1.20-foss-2023a"
-    "R:R/4.5.1-gfbf-2025a"
+    "QIIME2:QIIME2/2025.10-amplicon:"
+    "FastQC:FastQC/0.12.1-Java-11:"
+    "MultiQC:MultiQC/1.20-foss-2023a:"
+    "R:R/4.5.1-gfbf-2025a:"
+    "SRA-Toolkit::optional"
 )
 
 _LM_FAIL=0
 
 for _entry in "${_LM_TOOLS[@]}"; do
     _family="${_entry%%:*}"
-    _pinned="${_entry#*:}"
+    _rest="${_entry#*:}"
+    _pinned="${_rest%%:*}"
+    _optional="${_rest#*:}"
 
     if [ -n "${_pinned}" ]; then
         if module load "${_pinned}" 2>/dev/null; then
@@ -133,6 +155,7 @@ for _entry in "${_LM_TOOLS[@]}"; do
         | sort -u)
     _n_matches=$(echo "${_matches}" | grep -c . || true)
 
+    _this_fail=0
     if [ "${_n_matches}" -eq 1 ]; then
         _fallback="${_matches}"
         if module load "${_fallback}" 2>/dev/null; then
@@ -147,7 +170,7 @@ for _entry in "${_LM_TOOLS[@]}"; do
         else
             echo "MISSING: found exactly one candidate (${_fallback}) but 'module load' still" >&2
             echo "         failed for it -- inspect manually: module avail ${_family}" >&2
-            _LM_FAIL=1
+            _this_fail=1
         fi
     elif [ "${_n_matches}" -gt 1 ]; then
         _latest=$(echo "${_matches}" | sort -V | tail -1)
@@ -162,18 +185,29 @@ for _entry in "${_LM_TOOLS[@]}"; do
         else
             echo "MISSING: auto-selected ${_latest} (highest of ${_n_matches} real candidates) but" >&2
             echo "         'module load' still failed for it -- inspect manually: module avail ${_family}" >&2
-            _LM_FAIL=1
+            _this_fail=1
         fi
     else
         echo "MISSING: ${_family} -- not found under any version on this cluster." >&2
         echo "         Check 'module spider ${_family}' (not 'module avail' -- avail's matching" >&2
         echo "         can surface an unrelated same-named package) or ask your cluster admin." >&2
-        _LM_FAIL=1
+        _this_fail=1
+    fi
+
+    if [ "${_this_fail}" -eq 1 ]; then
+        if [ "${_optional}" == "optional" ]; then
+            echo "NOTE: ${_family} is optional (only needed if ENA's own download fails) --" >&2
+            echo "      not loaded, but this alone will not fail this script. The automatic" >&2
+            echo "      NCBI SRA fallback in lib/common.sh will itself fail clearly if it's" >&2
+            echo "      ever actually needed and still missing." >&2
+        else
+            _LM_FAIL=1
+        fi
     fi
 done
 
 _LM_RESULT="${_LM_FAIL}"
-unset _entry _family _pinned _matches _n_matches _fallback _latest _others _LM_TOOLS _LM_FAIL
+unset _entry _family _rest _pinned _optional _matches _n_matches _fallback _latest _others _this_fail _LM_TOOLS _LM_FAIL
 
 if [ "${_LM_RESULT}" -eq 0 ]; then
     echo ""

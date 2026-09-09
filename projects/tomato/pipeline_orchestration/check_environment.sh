@@ -82,7 +82,7 @@ if [ -s "${PROJECT_ROOT}/config/project.env" ]; then
   export PROJECT_ROOT
   # shellcheck disable=SC1091
   source "${PROJECT_ROOT}/config/project.env"
-  while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
+  while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
     [ "${assay}" = "assay" ] && continue
     [ "${workflow}" = "amplicon" ] || continue
     refseq=${refseq//'$REFERENCE_ROOT'/${REFERENCE_ROOT}}
@@ -95,7 +95,7 @@ if [ -s "${PROJECT_ROOT}/config/project.env" ]; then
         FAIL=1
       fi
     done
-  done < "${PROJECT_ROOT}/config/assays.tsv"
+  done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 
   echo ""
   echo "=== Checking shotgun reference artifacts (warning only) ==="

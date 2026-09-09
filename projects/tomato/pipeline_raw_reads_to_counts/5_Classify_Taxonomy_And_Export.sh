@@ -19,7 +19,7 @@ require_cmd qiime
 require_cmd biom
 mkdir -p "${OUTPUT_DIR}/exported"
 
-while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
+while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
   [[ "${assay}" == "assay" ]] && continue
   [[ "${workflow}" == "amplicon" ]] || continue
   refseq=${refseq//'$REFERENCE_ROOT'/${REFERENCE_ROOT}}
@@ -41,7 +41,7 @@ while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refs
     -o "${out}/feature_table/feature-table-with-taxonomy.biom" \
     --observation-metadata-fp "${out}/taxonomy/taxonomy.tsv" \
     --sc-separated taxonomy --observation-header-fields 'Feature ID,taxonomy,Confidence'
-done < "${PROJECT_ROOT}/config/assays.tsv"
+done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 
 # Shotgun branch: only mandatory when the cohort actually includes shotgun
 # runs (see the matching guard and comment in Script 4).

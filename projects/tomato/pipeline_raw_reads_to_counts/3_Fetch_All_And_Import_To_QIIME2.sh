@@ -20,7 +20,7 @@ manifest="${PROJECT_ROOT}/data/run_manifest.tsv"
 validate_reviewed_manifest "${manifest}"
 mkdir -p "${OUTPUT_DIR}/qiime_artifacts"
 
-tail -n +2 "${manifest}" | while IFS=$'\t' read -r include assay run analysis_id sample layout strategy ftp md5 reads sample_title experiment_title; do
+tail -n +2 "${manifest}" | tr '\t' '\037' | while IFS=$'\037' read -r include assay run analysis_id sample layout strategy ftp md5 reads sample_title experiment_title; do
   [[ "${include}" == "YES" ]] || continue
   IFS=';' read -r -a urls <<< "${ftp}"
   IFS=';' read -r -a sums <<< "${md5}"
@@ -32,7 +32,7 @@ tail -n +2 "${manifest}" | while IFS=$'\t' read -r include assay run analysis_id
   done
 done
 
-while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
+while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
   [[ "${assay}" == "assay" ]] && continue
   [[ "${workflow}" == "amplicon" ]] || continue
   qmanifest="${WORKDIR}/manifests/${assay}_qiime_manifest.csv"
@@ -47,6 +47,6 @@ while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refs
     --output-path "${OUTPUT_DIR}/qiime_artifacts/${assay}_demux.qza"
   qiime demux summarize --i-data "${OUTPUT_DIR}/qiime_artifacts/${assay}_demux.qza" \
     --o-visualization "${OUTPUT_DIR}/qiime_artifacts/${assay}_demux_summary.qzv"
-done < "${PROJECT_ROOT}/config/assays.tsv"
+done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 record_versions
 note "All reviewed reads are verified; amplicon branches are imported. Continue to Script 4."

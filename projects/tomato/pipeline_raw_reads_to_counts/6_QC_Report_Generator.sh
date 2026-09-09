@@ -18,7 +18,7 @@ require_cmd qiime
 require_cmd sha256sum
 mkdir -p "${OUTPUT_DIR}/qc/final"
 
-while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
+while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
   [[ "${assay}" == "assay" ]] && continue
   [[ "${workflow}" == "amplicon" ]] || continue
   require_file "${OUTPUT_DIR}/qiime_artifacts/${assay}_feature_table.qza"
@@ -28,7 +28,7 @@ while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refs
   qiime feature-table tabulate-seqs \
     --i-data "${OUTPUT_DIR}/qiime_artifacts/${assay}_rep_seqs.qza" \
     --o-visualization "${OUTPUT_DIR}/qiime_artifacts/${assay}_rep_seqs.qzv"
-done < "${PROJECT_ROOT}/config/assays.tsv"
+done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 
 if command -v multiqc >/dev/null 2>&1; then
   multiqc --force --outdir "${OUTPUT_DIR}/qc/final" "${OUTPUT_DIR}" || true

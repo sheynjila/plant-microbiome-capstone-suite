@@ -27,6 +27,20 @@ require_cmd qiime
 # external PYTHONPATH set; this pipeline never needs PYTHONPATH for
 # anything else, so clearing it here is safe.
 unset PYTHONPATH
+# Real, confirmed on teach-sub1 (barley03_import, job 30581, 2026-09-09):
+# `qiime tools import` internally instantiates a PluginManager that
+# eagerly loads EVERY installed plugin, including q2-composition
+# (ANCOM-BC2), which none of this pipeline's steps use. That plugin
+# imports rpy2 to embed R, and rpy2 found our separately module-loaded
+# R/4.5.1-gfbf-2025a (loaded here only for the later, unrelated R/
+# phyloseq analysis stage) and failed loading R's own methods.so with
+# "undefined symbol: R_typeToChar" -- an ABI conflict between that
+# module's R and whatever QIIME2 needs for its embedded-R use. QIIME2
+# handles this internally on its own; confirmed via direct interactive
+# reproduction that `module unload R` alone (nothing else) lets
+# `import rpy2.robjects` succeed. `|| true` since a normal environment
+# where R was never loaded has nothing to unload.
+module unload R 2>/dev/null || true
 manifest="${PROJECT_ROOT}/data/run_manifest.tsv"
 validate_reviewed_manifest "${manifest}"
 mkdir -p "${OUTPUT_DIR}/qiime_artifacts"

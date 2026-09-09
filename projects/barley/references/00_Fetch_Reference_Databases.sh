@@ -50,6 +50,12 @@ require_cmd sha256sum
 # load_modules.sh) leaks a python-version-mismatched numpy build into
 # qiime's own bundled python.
 unset PYTHONPATH
+# Real, confirmed on teach-sub1 (see Script 3 in pipeline_raw_reads_to_counts
+# for the full diagnosis): qiime's internal PluginManager eagerly loads
+# q2-composition (unused here), whose rpy2 dependency conflicts with our
+# separately module-loaded R/4.5.1-gfbf-2025a. QIIME2 handles R internally
+# on its own; that module is only needed for the later R/phyloseq stage.
+module unload R 2>/dev/null || true
 
 if ! qiime rescript --help >/dev/null 2>&1; then
   die "q2-rescript plugin not found in the loaded QIIME2 module -- see this script's own header for what to do next."

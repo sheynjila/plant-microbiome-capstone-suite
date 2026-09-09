@@ -27,6 +27,16 @@ pilot_id=$(awk -F '\t' -v assay="${PILOT_ASSAY}" 'NR>1 && $1=="YES" && $2==assay
 pilot_files=("${RAW_DIR}/${pilot_id}_R1.fastq.gz" "${RAW_DIR}/${pilot_id}_R2.fastq.gz")
 require_file "${pilot_files[0]}"; require_file "${pilot_files[1]}"
 fastqc --threads 2 --extract --outdir "${QC_DIR}" "${pilot_files[@]}"
+# Real, confirmed gotcha on teach-sub1: MultiQC/1.20-foss-2023a own
+# script has a `#!/usr/bin/env python` shebang, but neither its own
+# module nor FastQC provides a bare `python`/matching `python3` on PATH
+# -- only QIIME2 and R do, via their own bundled/dependency Python
+# builds (3.10 and 3.13 respectively), and BOTH are ABI-incompatible
+# with SciPy-bundle numpy (built for 3.11), causing:
+#   ModuleNotFoundError: No module named numpy.core._multiarray_umath
+# Explicitly loading MultiQC real Python dependency fixes it --
+# confirmed directly (multiqc --version succeeds after this).
+module load Python/3.11.3-GCCcore-12.3.0
 multiqc --force --outdir "${QC_DIR}" "${QC_DIR}"
 
 worksheet="${QC_DIR}/FASTQC_INTERPRETATION.md"

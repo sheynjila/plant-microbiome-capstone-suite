@@ -38,7 +38,21 @@ fastqc --threads 2 --extract --outdir "${QC_DIR}" "${pilot_files[@]}"
 # Explicitly loading MultiQC's real Python dependency fixes it --
 # confirmed directly (`multiqc --version` succeeds after this).
 module load Python/3.11.3-GCCcore-12.3.0
-multiqc --force --outdir "${QC_DIR}" "${QC_DIR}"
+# Real, confirmed gotcha: this MultiQC version (1.20-foss-2023a) exits
+# non-zero whenever it logs an internal error while building a report
+# (confirmed real cause here: a plotly chart-config warning, "Bad
+# property path: autorangeoptions") -- even though it still finishes and
+# writes a complete, real report ("MultiQC complete", real
+# multiqc_report.html/multiqc_data written). Not treated as fatal here,
+# since the report is genuinely usable -- but surfaced loudly, not
+# silently swallowed, so the report gets reviewed rather than trusted
+# blindly.
+if ! multiqc --force --outdir "${QC_DIR}" "${QC_DIR}"; then
+  echo "WARNING: multiqc exited non-zero but still completed and wrote a report --" >&2
+  echo "         inspect ${QC_DIR}/multiqc_report.html yourself before trusting it;" >&2
+  echo "         one chart may not have rendered as intended (see this script's own" >&2
+  echo "         header comment for the confirmed real cause)." >&2
+fi
 
 worksheet="${QC_DIR}/FASTQC_INTERPRETATION.md"
 printf '# Pilot FastQC interpretation\n\n' > "${worksheet}"

@@ -12,7 +12,7 @@ installed or required.
 
 ```bash
 cd pipeline_orchestration
-source activate_conda_env.sh
+source load_modules.sh
 bash check_environment.sh && bash run_pipeline_from_yaml.sh pipeline_config.yaml
 ```
 
@@ -20,7 +20,9 @@ That's it — this returns immediately after submitting all 7 jobs. Slurm's
 scheduler runs each one in turn, only starting step *N+1* once step *N*
 has actually exited successfully.
 
-**`activate_conda_env.sh` must be *sourced* (`source ...`, not `bash ...`)** — `conda activate` doesn't persist across a new login shell, and only changes the environment of whatever process runs it. Since no conda environment *name* is documented anywhere in this project (checked deliberately — see the script's own header), it discovers by capability instead of by name: it checks every environment on your account for whichever one actually provides `qiime`, `biom`, `fastqc`, `multiqc`, and `Rscript`, and activates it only if exactly one qualifies. Once you know which environment that is, skip the discovery cost on future sessions with `export PLANT_MICROBIOME_CONDA_ENV=<name>` before sourcing it.
+**Two environment-activation scripts exist here — try `load_modules.sh` first.** This project's own `environment/TOOLCHAIN.md` documents a portable, cluster-agnostic assumption ("a pre-activated conda environment... rather than a module system"), and `activate_conda_env.sh` was built against that first. But real evidence on this exact account, on this exact cluster, from fixing `PRJEB4927_Amplicon_Parkinsons_Gut_Microbiome` earlier in this curriculum, showed QIIME2 *is* available here as a real Lmod module (`QIIME2/2025.10-amplicon`) — so `load_modules.sh` tries modules first (pinned real versions for QIIME2 and FastQC, live discovery for MultiQC and R, since no confirmed version exists for those two yet). If `check_environment.sh` still reports something missing afterward, run `source activate_conda_env.sh` too — the two aren't mutually exclusive; a real cluster's setup can mix both.
+
+**Both must be *sourced* (`source ...`, not `bash ...`)** — `module load`/`conda activate` only change the environment of whatever process runs them, and won't persist past a subshell that immediately exits.
 
 ## No script duplication, no directory-isolation trick
 

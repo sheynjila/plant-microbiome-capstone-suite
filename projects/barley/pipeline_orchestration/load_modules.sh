@@ -37,13 +37,19 @@
 #              1.28-foss-2024a) -- neither has been run against this
 #              pipeline. Goes straight to discovery; see POLICY below
 #              for what happens with more than one real match.
-#   R       -> NO pinned version, same reason as MultiQC (provides
-#              Rscript). Real `module spider R` on 2026-09 found six
-#              versions (4.2.1 through 4.5.1, various toolchains) -- see
-#              POLICY below. check_environment.sh independently verifies
-#              the required R packages (phyloseq, ALDEx2, vegan, etc.)
-#              are actually installed for whatever R this loads, so a
-#              wrong pick surfaces there explicitly rather than silently.
+#   R       -> pinned "R/4.5.1-gfbf-2025a": CONFIRMED real and working on
+#              teach-sub1 -- this was originally the auto-selected
+#              highest of six real versions found (see POLICY below), and
+#              is now pinned because a real renv.lock was successfully
+#              built against it: all 7 required R packages installed
+#              (phyloseq, ALDEx2, vegan, ggplot2, dplyr, tibble,
+#              biomformat -- ALDEx2 needed a real `cmake` module loaded
+#              first for its RcppParallel/Rfast dependency chain to
+#              compile, see analysis_metagenomics_phyloseq/00_install_packages.R).
+#              Pinning this specific version matters because renv.lock is
+#              tied to it -- if a future cluster update added a newer R
+#              module, auto-select-highest would silently switch to it
+#              and lose access to these already-installed packages.
 #   biom    -> deliberately NOT a separate module entry. CONFIRMED (not
 #              assumed) on teach-sub1: `module load QIIME2/2025.10-amplicon
 #              && command -v biom` returned a real path
@@ -93,7 +99,7 @@ _LM_TOOLS=(
     "QIIME2:QIIME2/2025.10-amplicon"
     "FastQC:FastQC/0.12.1-Java-11"
     "MultiQC:"
-    "R:"
+    "R:R/4.5.1-gfbf-2025a"
 )
 
 _LM_FAIL=0

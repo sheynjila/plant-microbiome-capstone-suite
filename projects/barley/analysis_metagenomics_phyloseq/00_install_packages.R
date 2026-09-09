@@ -42,3 +42,13 @@ manage_packages <- function(mode = c("interactive", "automatic")) {
   invisible(lock)
 }
 
+## Auto-run when executed as a script (Rscript 00_install_packages.R), e.g.
+## from check_environment.sh's own instructions. Left as a no-op when this
+## file is `source()`d inside an interactive R session instead, so a human
+## can call manage_packages() themselves with the interactive [y/N] prompt.
+## Without this call, the functions above were defined but never invoked --
+## Rscript would silently exit having installed nothing.
+if (!interactive()) {
+  manage_packages(mode = "automatic")
+}
+

@@ -30,7 +30,13 @@ while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr re
     --o-visualization "${OUTPUT_DIR}/qiime_artifacts/${assay}_rep_seqs.qzv"
 done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 
+# Real, confirmed gotcha on teach-sub1 (see Script 2's own comment for the
+# full diagnosis): MultiQC's script needs its own matching Python
+# explicitly loaded, or it fails on whatever QIIME2/R's conflicting
+# Python left on PATH. Loaded here, after the qiime calls above already
+# ran, so it can't affect those.
 if command -v multiqc >/dev/null 2>&1; then
+  module load Python/3.11.3-GCCcore-12.3.0
   multiqc --force --outdir "${OUTPUT_DIR}/qc/final" "${OUTPUT_DIR}" || true
 fi
 record_versions

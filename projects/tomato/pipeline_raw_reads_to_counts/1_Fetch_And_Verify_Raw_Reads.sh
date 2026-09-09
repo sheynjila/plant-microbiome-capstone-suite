@@ -55,7 +55,7 @@ Move or rename it first, or re-run with FORCE_REGENERATE_MANIFEST=1 to overwrite
 fi
 
 printf 'include\tassay\trun_accession\tanalysis_id\tsample_accession\tlibrary_layout\tlibrary_strategy\tfastq_ftp\tfastq_md5\tread_count\tsample_title\texperiment_title\n' > "${MANIFEST}"
-tail -n +2 "${REPORT}" | while IFS=$'\t' read -r run study sample experiment sample_title experiment_title library_name strategy source selection layout instrument reads bases ftp md5 bytes; do
+tail -n +2 "${REPORT}" | tr '\t' '\037' | while IFS=$'\037' read -r run study sample experiment sample_title experiment_title library_name strategy source selection layout instrument reads bases ftp md5 bytes; do
   assay=$(classify_assay "${strategy}" "${sample_title} ${experiment_title} ${library_name}")
   include=NO
   [[ "${assay}" == "16S" || "${assay}" == "ITS" || "${assay}" == "shotgun" ]] && include=YES
@@ -70,7 +70,7 @@ validate_reviewed_manifest "${MANIFEST}"
 
 pilot=$(awk -F '\t' -v assay="${PILOT_ASSAY}" 'NR>1 && $1=="YES" && $2==assay {print; exit}' "${MANIFEST}")
 [[ -n "${pilot}" ]] || die "No reviewed pilot row for assay ${PILOT_ASSAY}"
-IFS=$'\t' read -r include assay run analysis_id sample layout strategy ftp md5 reads sample_title experiment_title <<< "${pilot}"
+IFS=$'\037' read -r include assay run analysis_id sample layout strategy ftp md5 reads sample_title experiment_title <<< "${pilot//$'\t'/$'\037'}"
 IFS=';' read -r -a urls <<< "${ftp}"
 IFS=';' read -r -a sums <<< "${md5}"
 [[ ${#urls[@]} -eq ${#sums[@]} ]] || die "FASTQ URL and MD5 counts differ for ${run}"

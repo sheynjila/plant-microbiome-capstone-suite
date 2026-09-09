@@ -18,7 +18,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 require_cmd qiime
 mkdir -p "${OUTPUT_DIR}/qiime_artifacts"
 
-while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
+while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
   [[ "${assay}" == "assay" ]] && continue
   [[ "${workflow}" == "amplicon" ]] || continue
   require_file "${OUTPUT_DIR}/qiime_artifacts/${assay}_demux.qza"
@@ -38,6 +38,6 @@ while IFS=$'\t' read -r assay workflow layout forward reverse truncf truncr refs
     --o-denoising-stats "${OUTPUT_DIR}/qiime_artifacts/${assay}_denoising_stats.qza"
   qiime metadata tabulate --m-input-file "${OUTPUT_DIR}/qiime_artifacts/${assay}_denoising_stats.qza" \
     --o-visualization "${OUTPUT_DIR}/qiime_artifacts/${assay}_denoising_stats.qzv"
-done < "${PROJECT_ROOT}/config/assays.tsv"
+done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 
 note "ASV inference and any study-specific read preprocessing are complete. Continue to Script 5."

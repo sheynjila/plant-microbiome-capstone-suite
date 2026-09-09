@@ -20,10 +20,12 @@ find_project_root <- function(start = getwd()) {
 ## default system library is admin-owned and not writable by a regular
 ## user -- install.packages() fails outright under non-interactive Rscript,
 ## which can't fall back to the "create a personal library?" prompt an
-## interactive session would show. Ensures a personal, writable library
-## exists and is checked first, so this works the same whether or not
-## R_LIBS_USER happens to already be set in the calling shell.
-ensure_writable_library <- function() {
+## interactive session would show. Also sets a concrete CRAN mirror: a
+## fresh non-interactive Rscript has no default one configured and errors
+## out immediately ("trying to use CRAN without setting a mirror")
+## otherwise. cloud.r-project.org is the R Project's own official,
+## globally load-balanced mirror -- the standard choice for exactly this.
+ensure_install_environment <- function() {
   lib <- Sys.getenv("R_LIBS_USER")
   if (identical(lib, "")) {
     lib <- file.path(Sys.getenv("HOME"), "R",
@@ -32,12 +34,15 @@ ensure_writable_library <- function() {
   }
   if (!dir.exists(lib)) dir.create(lib, recursive = TRUE, showWarnings = FALSE)
   .libPaths(c(lib, .libPaths()))
+  if (is.null(getOption("repos")) || identical(getOption("repos")[["CRAN"]], "@CRAN@")) {
+    options(repos = c(CRAN = "https://cloud.r-project.org"))
+  }
   invisible(lib)
 }
 
 manage_packages <- function(mode = c("interactive", "automatic")) {
   mode <- match.arg(mode)
-  ensure_writable_library()
+  ensure_install_environment()
   if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
   root <- find_project_root()
   lock <- file.path(root, "renv.lock")

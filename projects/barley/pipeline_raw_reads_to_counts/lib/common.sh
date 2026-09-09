@@ -46,10 +46,34 @@ download_one() {
   local url=$1 expected_md5=$2 destination=$3
   require_cmd curl
   require_cmd md5sum
+  require_cmd file
   [[ "${url}" =~ ^https?:// ]] || url="https://${url}"
   if [[ ! -s "${destination}" ]]; then
-    curl --fail --location --retry 5 --retry-delay 5 --continue-at - \
-      --output "${destination}.partial" "${url}"
+    # Real, confirmed gotcha: ENA's server has been observed to respond to
+    # a real, valid FASTQ URL with a 301 redirect to a trailing-slash
+    # variant that serves a small HTML page instead of the real gzip file
+    # -- reproducible from a compute node even when the exact same URL
+    # succeeds moments later from the login node (a real, intermittent
+    # upstream backend inconsistency, not a local network/proxy issue --
+    # confirmed via the TLS handshake terminating at ENA's own real
+    # certificate, no interception). `curl --fail` does NOT catch this,
+    # since ENA's response has a normal 200 status. Detect it by the
+    # real downloaded file's type, not by trusting curl's exit code
+    # alone, and retry a bounded number of times -- no --continue-at
+    # here, since resuming onto a known-bad small HTML file would just
+    # corrupt the next attempt too; each retry re-downloads fully.
+    local attempt
+    for attempt in 1 2 3 4 5; do
+      curl --fail --location --retry 5 --retry-delay 5 \
+        --output "${destination}.partial" "${url}"
+      if file --brief --mime-type "${destination}.partial" | grep -q '^application/gzip$'; then
+        break
+      fi
+      echo "WARNING: attempt ${attempt}/5 for ${url} did not return real gzip data (got $(file --brief --mime-type "${destination}.partial")) -- retrying..." >&2
+      sleep 10
+    done
+    file --brief --mime-type "${destination}.partial" | grep -q '^application/gzip$' \
+      || die "Never received real gzip data for ${url} after 5 attempts -- inspect ${destination}.partial by hand and consider reporting this to ENA if it persists"
     mv "${destination}.partial" "${destination}"
   fi
   printf '%s  %s\n' "${expected_md5}" "${destination}" | md5sum --check --status \

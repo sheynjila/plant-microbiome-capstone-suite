@@ -16,8 +16,28 @@ find_project_root <- function(start = getwd()) {
   stop("Run Script 00 from the project root or its analysis subdirectory.", call. = FALSE)
 }
 
+## On a shared HPC install (e.g. a module-provided R under /apps/...), the
+## default system library is admin-owned and not writable by a regular
+## user -- install.packages() fails outright under non-interactive Rscript,
+## which can't fall back to the "create a personal library?" prompt an
+## interactive session would show. Ensures a personal, writable library
+## exists and is checked first, so this works the same whether or not
+## R_LIBS_USER happens to already be set in the calling shell.
+ensure_writable_library <- function() {
+  lib <- Sys.getenv("R_LIBS_USER")
+  if (identical(lib, "")) {
+    lib <- file.path(Sys.getenv("HOME"), "R",
+                      paste0(R.version$platform, "-library"),
+                      paste(R.version$major, sub("\\..*$", "", R.version$minor), sep = "."))
+  }
+  if (!dir.exists(lib)) dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+  .libPaths(c(lib, .libPaths()))
+  invisible(lib)
+}
+
 manage_packages <- function(mode = c("interactive", "automatic")) {
   mode <- match.arg(mode)
+  ensure_writable_library()
   if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
   root <- find_project_root()
   lock <- file.path(root, "renv.lock")

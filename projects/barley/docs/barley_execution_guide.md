@@ -30,6 +30,12 @@
     |-- config/
     |   |-- project.env.example
     |   `-- assays.tsv
+    |-- pipeline_orchestration/               optional: automated Slurm chain + environment setup
+    |   |-- load_modules.sh                   source this first on teach-sub1 (Lmod modules)
+    |   |-- activate_conda_env.sh             fallback: discovers a conda env by capability
+    |   |-- check_environment.sh
+    |   |-- pipeline_config.yaml
+    |   `-- run_pipeline_from_yaml.sh
     |-- data/
     |   |-- analysis_metadata.tsv
     |   `-- run_manifest.tsv                 created by Script 1
@@ -53,6 +59,8 @@
     ## Computational preparation
 
     Run the upstream workflow on Linux or a Linux HPC node. The active environment must expose `curl`, `md5sum`, `sha256sum`, FastQC, MultiQC, QIIME 2 with q2-cutadapt and q2-dada2, and BIOM. The tomato project additionally needs fastp, Bowtie2, Kraken2, Bracken, and Python 3. Record the exact versions actually used; software interfaces matter more than a nominal environment name.
+
+    Two scripts under `pipeline_orchestration/` automate this rather than hand-loading each tool. On `teach-sub1`, `source load_modules.sh` is confirmed to work: it loads real, pinned Lmod modules for QIIME2 (`QIIME2/2025.10-amplicon`) and FastQC (`FastQC/0.12.1-Java-11`), and live-discovers a real MultiQC or R version otherwise (auto-selecting the highest available on the cluster, since neither has one single confirmed-working version yet — every version it did not pick is named in its output). `biom` is confirmed to ship bundled with the QIIME2 module here, not as a separate module. On a cluster without these as Lmod modules, `source activate_conda_env.sh` instead discovers a conda environment providing the same tools by capability (no environment name is pinned, since none is documented for this project). Both must be *sourced*, never executed directly, or the environment changes vanish immediately. Follow either with `bash check_environment.sh`, which also verifies the required R packages and every reference artifact named in `config/assays.tsv` — see Troubleshooting for real failures hit running this exact sequence on `teach-sub1`.
 
     Copy `config/project.env.example` to the ignored `config/project.env`. Set external work, raw-read, output, and reference paths if project defaults are unsuitable. Do not store raw reads or reference databases in Git.
 
@@ -134,6 +142,16 @@
     A minimum project may use a reviewed subset when full download or computation is infeasible, but the subset rule must be chosen before results are inspected and must preserve the relevant treatments, blocks, and controls.
 
     ## Troubleshooting
+
+    **`activate_conda_env.sh` reports `conda is not on PATH`.** Expected on `teach-sub1` specifically: this cluster provides QIIME2, FastQC, MultiQC, and R as real Lmod modules, not conda. Try `source load_modules.sh` first; combine the two scripts only if `load_modules.sh` alone still leaves something `check_environment.sh` reports missing.
+
+    **`load_modules.sh` reports multiple real versions for MultiQC or R and auto-selects the highest.** Deliberate, not a failure. Neither tool has one single confirmed-working version yet, so the script picks the newest real version available on the cluster and loads it, always naming every version it did not pick. A wrong pick is not silent: MultiQC's own report output would simply look different, and any R-package incompatibility is caught explicitly by `check_environment.sh`'s own required-package check below. Pin a specific version inside the script instead once one is confirmed to work best for this pipeline.
+
+    **`Rscript analysis_metagenomics_phyloseq/00_install_packages.R` returns instantly with no output, and `check_environment.sh` still reports the exact same missing R packages afterward.** The script's `manage_packages()` function must actually be invoked at the top level; confirm the file ends with `if (!interactive()) manage_packages(mode = "automatic")`. Without that call, `Rscript` only defines the function and exits having installed nothing — a real bug found and fixed on 2026-09, present identically in all three sibling projects (barley, tiftuf, tomato) until then.
+
+    **`install.packages("renv")` fails: `'lib = ".../lib64/R/library"' is not writable`.** A module-provided R on shared HPC installs into an admin-owned system library a regular user can never write to; an interactive R session would prompt to create a personal one, but non-interactive `Rscript` can't show that prompt. Confirm `00_install_packages.R` calls `ensure_install_environment()` at the top of `manage_packages()` (it resolves or creates a personal `R_LIBS_USER` library automatically) — or set one yourself before running the script: `export R_LIBS_USER=~/R/library; mkdir -p "$R_LIBS_USER"`.
+
+    **`install.packages()` fails: `trying to use CRAN without setting a mirror`.** A fresh non-interactive `Rscript` session has no default CRAN mirror configured; interactive R would prompt a picker list, which `Rscript` cannot show. Confirm `ensure_install_environment()` sets `options(repos = c(CRAN = "https://cloud.r-project.org"))`, or set it yourself first if running commands by hand.
 
     **No assay is included after Script 1.** Review `sample_title`, `experiment_title`, and `library_name` in the ENA report. Resolve `REVIEW_REQUIRED` manually; do not weaken the classifier until unrelated libraries enter the project.
 

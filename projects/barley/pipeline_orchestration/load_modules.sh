@@ -26,26 +26,42 @@
 # WHAT IS AND ISN'T CONFIRMED REAL HERE -- READ BEFORE TRUSTING THE PINS:
 #   QIIME2  -> pinned "QIIME2/2025.10-amplicon": CONFIRMED real on
 #              teach-sub1 (used to fix PRJEB4927 earlier this session).
+#              Real `module spider QIIME2` on 2026-09 also lists
+#              QIIME2/2023.7, QIIME2/2025.4-amplicon, QIIME2/2026.04.
 #   FastQC  -> pinned "FastQC/0.12.1-Java-11": CONFIRMED real on
 #              teach-sub1 (environment/TOOLCHAIN.md of the sibling
-#              PRJNA983748_Saureus_Genome_Assembly repo, same cluster).
-#   MultiQC -> NO pinned version. Not confirmed to exist as a module on
-#              this cluster at all -- this entry goes straight to live
-#              `module avail MultiQC` discovery every time, with no
-#              "try this first" shortcut, specifically because there is
-#              nothing confirmed to try.
+#              PRJNA983748_Saureus_Genome_Assembly repo, same cluster;
+#              also directly reconfirmed via `module spider FastQC`).
+#   MultiQC -> NO pinned version. Real `module spider MultiQC` on
+#              2026-09 found two versions (1.20-foss-2023a,
+#              1.28-foss-2024a) -- neither has been run against this
+#              pipeline. Goes straight to discovery; see POLICY below
+#              for what happens with more than one real match.
 #   R       -> NO pinned version, same reason as MultiQC (provides
-#              Rscript). "R" is a very common real Lmod family name by
-#              convention, but that is a naming convention, not a
-#              confirmed fact about this specific cluster.
-#   biom    -> deliberately NOT a separate entry here. biom-format
-#              typically ships bundled inside a QIIME2 distribution
-#              rather than as its own module -- an assumption, not a
-#              confirmed fact. If `qiime biom fastqc multiqc Rscript`'s
-#              own check_environment.sh reports biom missing after
-#              QIIME2 loads cleanly, that assumption was wrong and this
-#              script needs a real "BIOM" entry added, based on that
-#              evidence.
+#              Rscript). Real `module spider R` on 2026-09 found six
+#              versions (4.2.1 through 4.5.1, various toolchains) -- see
+#              POLICY below. check_environment.sh independently verifies
+#              the required R packages (phyloseq, ALDEx2, vegan, etc.)
+#              are actually installed for whatever R this loads, so a
+#              wrong pick surfaces there explicitly rather than silently.
+#   biom    -> deliberately NOT a separate module entry. CONFIRMED (not
+#              assumed) on teach-sub1: `module load QIIME2/2025.10-amplicon
+#              && command -v biom` returned a real path
+#              (/apps/eb/QIIME2/2025.10-amplicon/bin/biom) -- biom ships
+#              bundled inside the QIIME2 module here.
+#
+# POLICY for 2+ real candidates found during discovery (no single
+# confirmed-working version to fall back to): auto-select the highest
+# version via `sort -V` (a real, version-aware sort -- NOT a plain
+# lexicographic sort, which would misorder e.g. 4.10.x before 4.2.x) and
+# load it, always with a loud, unmissable warning naming every candidate
+# it did NOT pick. This is a deliberate choice, not the previous
+# behavior (which refused and asked a human to choose) -- made because
+# for MultiQC and R specifically, a wrong pick is not silent: MultiQC's
+# own output would just look different, and any R-package mismatch is
+# already caught explicitly by check_environment.sh's own separate
+# package check. Zero real candidates still refuses outright -- there is
+# nothing to auto-select from.
 #
 # GOTCHA THIS SCRIPT GUARDS AGAINST: module-name matching on some Lmod
 # configs is loose enough to surface an unrelated same-named package (a
@@ -119,10 +135,20 @@ for _entry in "${_LM_TOOLS[@]}"; do
             _LM_FAIL=1
         fi
     elif [ "${_n_matches}" -gt 1 ]; then
-        echo "MISSING: ${_family} -- multiple versions found, refusing to guess which one:" >&2
-        echo "${_matches}" | sed 's/^/         /' >&2
-        echo "         Pick one, edit this script's pinned entry for ${_family}, and re-source it." >&2
-        _LM_FAIL=1
+        _latest=$(echo "${_matches}" | sort -V | tail -1)
+        _others=$(echo "${_matches}" | grep -v -F -x "${_latest}")
+        if module load "${_latest}" 2>/dev/null; then
+            echo "WARNING: ${_family} has multiple real versions on this cluster -- auto-selected"
+            echo "         the highest, ${_latest}, and loaded it. NOT verified against this"
+            echo "         pipeline. Versions NOT selected:"
+            echo "${_others}" | sed 's/^/           /'
+            echo "         To pin a different one instead, set this entry's pinned value in"
+            echo "         this script and re-source it."
+        else
+            echo "MISSING: auto-selected ${_latest} (highest of ${_n_matches} real candidates) but" >&2
+            echo "         'module load' still failed for it -- inspect manually: module avail ${_family}" >&2
+            _LM_FAIL=1
+        fi
     else
         echo "MISSING: ${_family} -- not found under any version on this cluster." >&2
         echo "         Check 'module spider ${_family}' (not 'module avail' -- avail's matching" >&2
@@ -132,14 +158,12 @@ for _entry in "${_LM_TOOLS[@]}"; do
 done
 
 _LM_RESULT="${_LM_FAIL}"
-unset _entry _family _pinned _matches _n_matches _fallback _LM_TOOLS _LM_FAIL
+unset _entry _family _pinned _matches _n_matches _fallback _latest _others _LM_TOOLS _LM_FAIL
 
 if [ "${_LM_RESULT}" -eq 0 ]; then
     echo ""
     echo "=== All modules loaded. Proceed with: bash check_environment.sh ==="
-    echo "(If check_environment.sh still reports 'biom' missing, this project's assumption"
-    echo " that biom ships bundled with QIIME2 was wrong on this cluster -- report that and"
-    echo " a real BIOM module entry gets added here based on the evidence.)"
+    echo "(biom is confirmed bundled with the QIIME2 module -- no separate load needed.)"
 else
     echo ""
     echo "=== One or more modules could not be loaded -- see MISSING lines above. ===" >&2

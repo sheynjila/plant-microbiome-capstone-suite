@@ -37,7 +37,19 @@ done < <(tr '\t' '\037' < "${PROJECT_ROOT}/config/assays.tsv")
 # ran, so it can't affect those.
 if command -v multiqc >/dev/null 2>&1; then
   module load Python/3.11.3-GCCcore-12.3.0
-  multiqc --force --outdir "${OUTPUT_DIR}/qc/final" "${OUTPUT_DIR}" || true
+  # Real, confirmed gotcha: this MultiQC version (1.20-foss-2023a) exits
+  # non-zero whenever it logs an internal error while building a report
+  # (confirmed real cause: a plotly chart-config warning, "Bad property
+  # path: autorangeoptions") -- even though it still finishes and writes
+  # a complete, real report. Previously bare `|| true` here silently
+  # swallowed this with no visible sign the report might need review;
+  # now surfaced loudly instead.
+  if ! multiqc --force --outdir "${OUTPUT_DIR}/qc/final" "${OUTPUT_DIR}"; then
+    echo "WARNING: multiqc exited non-zero but still completed and wrote a report --" >&2
+    echo "         inspect ${OUTPUT_DIR}/qc/final/multiqc_report.html yourself before" >&2
+    echo "         trusting it; one chart may not have rendered as intended (see" >&2
+    echo "         Script 2's header comment for the confirmed real cause)." >&2
+  fi
 fi
 record_versions
 find "${OUTPUT_DIR}/exported" -type f -print0 | sort -z | xargs -0 sha256sum \

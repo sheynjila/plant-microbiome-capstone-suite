@@ -46,12 +46,21 @@ done
 while IFS=$'\037' read -r assay workflow layout forward reverse truncf truncr refseq reftax; do
   [[ "${assay}" == "assay" ]] && continue
   [[ "${workflow}" == "amplicon" ]] || continue
-  qmanifest="${WORKDIR}/manifests/${assay}_qiime_manifest.csv"
-  printf 'sample-id,forward-absolute-filepath,reverse-absolute-filepath\n' > "${qmanifest}"
+  # Real, confirmed on teach-sub1: the installed QIIME2/2025.10-amplicon
+  # distribution's PairedEndFastqManifestPhred33V2 importer requires this
+  # manifest to be TAB-separated, not comma-separated -- confirmed against
+  # the current amplicon-docs.qiime2.org import guide (older, pre-"amplicon
+  # distribution" QIIME2 tutorials show a comma-separated example instead,
+  # which is what this script originally matched). Feeding it a comma-
+  # separated file makes qiime read the entire header/row as one field
+  # (no tab found to split on) and fail with "Found unrecognized ID
+  # column name '<whole line>'".
+  qmanifest="${WORKDIR}/manifests/${assay}_qiime_manifest.tsv"
+  printf 'sample-id\tforward-absolute-filepath\treverse-absolute-filepath\n' > "${qmanifest}"
   awk -F '\t' -v a="${assay}" 'NR>1 && $1=="YES" && $2==a {print $4}' "${manifest}" | while read -r analysis_id; do
     require_file "${RAW_DIR}/${analysis_id}_R1.fastq.gz"
     require_file "${RAW_DIR}/${analysis_id}_R2.fastq.gz"
-    printf '%s,%s,%s\n' "${analysis_id}" "${RAW_DIR}/${analysis_id}_R1.fastq.gz" "${RAW_DIR}/${analysis_id}_R2.fastq.gz" >> "${qmanifest}"
+    printf '%s\t%s\t%s\n' "${analysis_id}" "${RAW_DIR}/${analysis_id}_R1.fastq.gz" "${RAW_DIR}/${analysis_id}_R2.fastq.gz" >> "${qmanifest}"
   done
   qiime tools import --type 'SampleData[PairedEndSequencesWithQuality]' \
     --input-path "${qmanifest}" --input-format PairedEndFastqManifestPhred33V2 \

@@ -32,11 +32,20 @@
 #              teach-sub1 (environment/TOOLCHAIN.md of the sibling
 #              PRJNA983748_Saureus_Genome_Assembly repo, same cluster;
 #              also directly reconfirmed via `module spider FastQC`).
-#   MultiQC -> NO pinned version. Real `module spider MultiQC` on
-#              2026-09 found two versions (1.20-foss-2023a,
-#              1.28-foss-2024a) -- neither has been run against this
-#              pipeline. Goes straight to discovery; see POLICY below
-#              for what happens with more than one real match.
+#   MultiQC -> pinned "MultiQC/1.20-foss-2023a": CONFIRMED real and
+#              working (`multiqc --version` succeeds). This is NOT the
+#              highest of the two real versions -- auto-select-highest
+#              originally picked 1.28-foss-2024a (see POLICY below),
+#              which on a real run threw
+#                ModuleNotFoundError: No module named 'rpds.rpds'
+#              a broken compiled dependency (rpds-py, pulled in via
+#              jsonschema/referencing) inside that module's own bundled
+#              Python environment on this cluster -- not something this
+#              project can fix, only work around by pinning the older,
+#              working version instead. This is the real failure mode
+#              the auto-select-highest policy explicitly accepted the
+#              risk of (see POLICY) -- it happened on the very first
+#              real run that reached this tool.
 #   R       -> pinned "R/4.5.1-gfbf-2025a": CONFIRMED real and working on
 #              teach-sub1 -- this was originally the auto-selected
 #              highest of six real versions found (see POLICY below), and
@@ -98,7 +107,7 @@ fi
 _LM_TOOLS=(
     "QIIME2:QIIME2/2025.10-amplicon"
     "FastQC:FastQC/0.12.1-Java-11"
-    "MultiQC:"
+    "MultiQC:MultiQC/1.20-foss-2023a"
     "R:R/4.5.1-gfbf-2025a"
 )
 
